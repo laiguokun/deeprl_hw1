@@ -85,8 +85,6 @@ def value_function_to_policy(env, gamma, value_function):
           if (v > v_max):
             v_max = v;
             a_max = a;
-          if (s==2):
-            print(v);
       policy[s] = a_max;
     return policy
 
@@ -217,7 +215,7 @@ def value_iteration(env, gamma, max_iterations=int(1e3), tol=1e-3):
           for prob, next_state, reward, terminal in env.P[s][a]:
             v += prob * (reward + gamma * V[next_state]);
           v_max = max(v, v_max);
-        delta = max(delta, abs(v - V[s]));
+        delta = max(delta, abs(v_max - V[s]));
         V[s] = v_max;
       cnt += 1;
     return V, cnt;
