@@ -4,6 +4,8 @@ from __future__ import print_function, unicode_literals
 
 import numpy as np
 
+max_int = 100000;
+epsilon = 1e-3
 
 def evaluate_policy(env, gamma, policy, max_iterations=int(1e3), tol=1e-3):
     """Evaluate the value of a policy.
@@ -32,7 +34,22 @@ def evaluate_policy(env, gamma, policy, max_iterations=int(1e3), tol=1e-3):
     np.ndarray
       The value for the given policy
     """
-    return np.zeros(env.nS)
+    delta = max_int;
+    V = np.zeros(env.nS);
+    cnt = 0;
+
+    while (delta > tol and cnt < max_iterations):
+      delta = 0;
+      for s in range(env.nS):
+        v = 0;
+        a = policy[s];
+        for prob, next_state, reward, terminal in env.P[s][a]:
+          v += prob * (reward + gamma * V[next_state]);
+        delta = max(delta, abs(v-V[s]));
+        V[s] = v;
+        cnt += 1;
+
+    return V, cnt
 
 
 def value_function_to_policy(env, gamma, value_function):
@@ -55,7 +72,23 @@ def value_function_to_policy(env, gamma, value_function):
       in that state according to the environment dynamics and the
       given value function.
     """    
-    return np.zeros(env.nS, dtype='int')
+
+    policy = np.zeros(env.nS, dtype='int');
+
+    for s in range(env.nS):
+      v_max = -max_int;
+      a_max = 0;
+      for a in range(env.nA):
+          v = 0;
+          for prob, next_state, reward, terminal in env.P[s][a]:
+            v += prob * (reward + gamma * value_function[next_state]);
+          if (v > v_max):
+            v_max = v;
+            a_max = a;
+          if (s==2):
+            print(v);
+      policy[s] = a_max;
+    return policy
 
 
 def improve_policy(env, gamma, value_func, policy):
@@ -87,7 +120,18 @@ def improve_policy(env, gamma, value_func, policy):
     bool, np.ndarray
       Returns true if policy changed. Also returns the new policy.
     """
-    return False, policy
+
+    policy_ = value_function_to_policy(env,gamma,value_func)
+    flag = False;
+
+    for s in range(env.nS):
+      for a in range(env.nA):
+        if (policy_[s] != policy[s]):
+          flag = True;
+          break;
+      if (flag): break;
+
+    return flag, policy_
 
 
 def policy_iteration(env, gamma, max_iterations=int(1e3), tol=1e-3):
@@ -119,10 +163,19 @@ def policy_iteration(env, gamma, max_iterations=int(1e3), tol=1e-3):
        Returns optimal policy, value function, number of policy
        improvement iterations, and number of value iterations.
     """
+
     policy = np.zeros(env.nS, dtype='int')
     value_func = np.zeros(env.nS)
+    cnt = 0;
+    val_cnt = 0;
+    flag = True;
 
-    return policy, value_func, 0, 0
+    while (flag and cnt < max_iterations):
+      value_func, v_cnt = evaluate_policy(env, gamma, policy)
+      val_cnt += v_cnt;
+      flag, policy = improve_policy(env, gamma, value_func, policy);
+      cnt += 1;
+    return policy, value_func, cnt, val_cnt
 
 
 def value_iteration(env, gamma, max_iterations=int(1e3), tol=1e-3):
@@ -150,7 +203,24 @@ def value_iteration(env, gamma, max_iterations=int(1e3), tol=1e-3):
     np.ndarray, iteration
       The value function and the number of iterations it took to converge.
     """
-    return np.zeros(env.nS), 0
+
+    V = np.zeros(env.nS);
+    cnt = 0;
+    delta = max_int;
+
+    while (delta > tol and cnt < max_iterations):
+      delta = 0;
+      for s in range(env.nS):
+        v_max = - max_int;
+        for a in range(env.nA):
+          v = 0;
+          for prob, next_state, reward, terminal in env.P[s][a]:
+            v += prob * (reward + gamma * V[next_state]);
+          v_max = max(v, v_max);
+        delta = max(delta, abs(v - V[s]));
+        V[s] = v_max;
+      cnt += 1;
+    return V, cnt;
 
 
 def print_policy(policy, action_names):

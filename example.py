@@ -7,6 +7,7 @@ from builtins import input
 
 import deeprl_hw1.lake_envs as lake_env
 import gym
+from gym import wrappers
 import time
 
 
